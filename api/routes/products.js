@@ -1,60 +1,45 @@
-const express = require('express'); //this how we import 
+const express = require('express'); 
 const router = express.Router();
-const mongoose = require('mongoose');
-const Product = require('../models/product')
+const multer = require('multer');
+const checkAuth = require('../middleware/check-auth');
+const ProductsController = require('../controllers/products');
 
-router.get('/', (req,res,next)=>{
-    res.status(200).json({
-        message: 'Handling GET requests to /products'
-    });
-
-}); //not /products since it if we did like that it will be /products/products
-
-router.post('/', (req,res,next)=>{
-
-    const product = new Product({
-        _id: new mongoose.Types.ObjectId(),
-        name: req.body.name,
-        price: req.body.price 
-    });
-    product
-        .save()
-        .then(result=>{
-           console.log(result);
-        })
-         .catch(err => console.log(err));
-
-    res.status(201).json({
-        message: 'Handling POST requests to /products',
-        createProduct: product
-        
-    })
-});
-
-router.get('/:productId', (req, res, next)=>{
-    const id = req.params.productId;//get the id from the request
-    if(id=== 'special'){
-        res.status(200).json({
-            message: 'You discovered the special ID',
-            id: id
-        });
+const storage = multer.diskStorage({
+    destination: function(req,file,cb){
+       cb(null, './uploads/'); //cb is call back function
+    },
+    filename: function(req, file, cb){
+        cb(null, Date.now() + file.originalname); 
+    }
+})
+const filefilter = (req,file,cb) =>{
+    //reject a file
+    if(file.mimetype === 'image/jpeg' || file.mimetype === 'image/png'){
+         cb(null, true);
     }
     else{
-        res.status(200).json({
-            message:'You passed an ID'
-        });
+         cb(null,false);
     }
-});
+}
+const upload = multer({
+    storage: storage, 
+    limits:{
+    fileSize: 1024 * 1024 *5
+    },
+    fileFilter: filefilter
 
-router.patch('/:productId', (req, res, next)=>{
-    res.status(200).json({
-        message: 'Updated product'
-    });
-});
+}); //uploads is a folder where multer store all images
 
-router.delete('/:productId', (req, res, next)=>{
-   res.status(200).json({
-       message: 'Deleted product'
-   });
-});
+const Product = require('../models/product')
+
+router.get('/', ProductsController.get_all_products); //not /products since if we did like that it will be /products/products
+
+router.post('/', checkAuth, upload.single('productImage'), ProductsController.add_product); //the post func can hold multiple handlers 'upload is a handler'
+ 
+router.get('/:productId', ProductsController.get_product_byId);
+
+router.patch('/:productId', checkAuth, ProductsController.update_product);
+
+router.delete('/:productId', checkAuth, ProductsController.delete_product);
+
 module.exports = router;

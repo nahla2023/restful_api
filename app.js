@@ -8,16 +8,23 @@ const mongoose = require('mongoose');
 
 const productRoutes =  require('./api/routes/products');
 const orderRoutes =  require('./api/routes/orders');
+const userRoutes = require('./api/routes/user');
 
+const MONGODB_URI = "mongodb+srv://node-rest-shop:"+process.env.MONGO_ATLAS_PW+"@atlascluster.vt46k1m.mongodb.net/?retryWrites=true&w=majority";
 
+mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+  .then(() => console.log('MongoDB connected'))
+  .catch(error => console.error(error));
 
-mongoose.connect("mongodb://node-rest-shop:"+'api123'+"@atlascluster.vt46k1m.mongodb.net/?retryWrites=true&w=majority",
-{
-    useMongoClient: true
-});
+mongoose.Promise = global.Promise;
+
 mongoose.set('strictQuery', false);
 //this just let us to show the request status and time in the terminal
 app.use(morgan('dev'));
+app.use('/uploads',express.static('uploads'));
 app.use(bodyParser.urlencoded({extended: false}));//let us extract urlencoded bodies
 app.use(bodyParser.json());//let us extract json bodies
 app.use((req,res,next)=>{ //this is to avoid CORS Errors (while testing it doesn't happen since we are on the same server it only happens on diff one)
@@ -34,10 +41,11 @@ app.use((req,res,next)=>{ //this is to avoid CORS Errors (while testing it doesn
 //Routes which should handle requests 
 app.use('/orders',orderRoutes); //handling request for orders
 app.use('/products',productRoutes); //handling request for products
+app.use('/user',userRoutes); //handling request for signup
 
 //it will reach this line if none of the above requests are sent 
 app.use((req,res,next)=>{
-    const error = new Error('Not found');
+    const error = new Error('Page Not found');
     error.status = 404;
     next(error);
 
